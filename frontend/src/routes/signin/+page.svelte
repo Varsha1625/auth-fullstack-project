@@ -5,44 +5,74 @@
   let password = '';
   let loading = false;
   let message = '';
+  let isError = false;
+
+  const API_URL = import.meta.env.VITE_BACKEND_URL;
 
   async function handleSignin() {
     loading = true;
     message = '';
+    isError = false;
+
+    // ✅ no internet handling
+    if (!navigator.onLine) {
+      message = '❌ No internet connection. Please check your network.';
+      isError = true;
+      loading = false;
+      return;
+    }
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/signin`, {
+      const res = await fetch(`${API_URL}/auth/signin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ email, password })
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error('Invalid server response');
+      }
 
-      console.log('SIGNIN RESPONSE:', data); // 👈 IMPORTANT DEBUG
+      console.log('SIGNIN RESPONSE:', data);
 
-      // ❌ Handle backend logical errors
-      if (data.statusCode && data.statusCode !== 200) {
-        message = '❌ ' + data.message;
+      // ❌ HTTP / backend errors
+      if (!res.ok) {
+        message = data.message
+          ? `❌ ${data.message}`
+          : '❌ Invalid email or password.';
+        isError = true;
         return;
       }
 
-      // ❌ Token missing
+      // ❌ token missing
       if (!data.token) {
-        message = '❌ Signin succeeded but token missing';
+        message = '❌ Login failed: token not received.';
+        isError = true;
         return;
       }
 
-      // ✅ Save token
+      // ✅ save token
       localStorage.setItem('token', data.token);
 
-      message = '✅ Signin successful! Token saved';
+      message = '✅ Login successful! Redirecting...';
 
-      // Redirect
-      goto('/dashboard');
+      // clear inputs
+      email = '';
+      password = '';
+
+      // redirect
+      setTimeout(() => {
+        goto('/dashboard');
+      }, 800);
 
     } catch (err: any) {
-      message = '❌ Network error: ' + err.message;
+      message = '❌ Server unreachable. Please try again later.';
+      isError = true;
     } finally {
       loading = false;
     }
@@ -58,6 +88,7 @@
       placeholder="Email"
       type="email"
       bind:value={email}
+      required
     />
 
     <input
@@ -65,6 +96,7 @@
       placeholder="Password"
       type="password"
       bind:value={password}
+      required
     />
 
     <button
@@ -72,11 +104,17 @@
       on:click={handleSignin}
       disabled={loading}
     >
-      {loading ? "Logging in..." : "Sign In"}
+      {loading ? 'Logging in...' : 'Sign In'}
     </button>
 
     {#if message}
-      <p class="text-center mt-4">{message}</p>
+      <p
+        class="text-center mt-4 font-medium"
+        class:text-red-600={isError}
+        class:text-green-600={!isError}
+      >
+        {message}
+      </p>
     {/if}
   </div>
 </div>
