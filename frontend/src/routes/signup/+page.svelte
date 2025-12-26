@@ -8,7 +8,7 @@
   let message = '';
   let isError = false;
 
-  console.log("API URL:", import.meta.env.VITE_BACKEND_URL);
+  console.log("API URL:", import.meta.env.VITE_API_URL);
 
   // ✅ backend URL from env
   const API_URL = import.meta.env.VITE_BACKEND_URL;
