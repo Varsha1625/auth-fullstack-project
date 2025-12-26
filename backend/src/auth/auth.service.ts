@@ -16,17 +16,21 @@ export class AuthService {
     private config: ConfigService,
     private jwtService: JwtService
   ) {
+    // ✅ ALWAYS use process.env on Render
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    console.log('🔎 SUPABASE_URL:', process.env.SUPABASE_URL);
-    console.log('🔎 SERVICE_ROLE_KEY EXISTS:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('🔎 SUPABASE_URL exists:', !!supabaseUrl);
+    console.log('🔎 SERVICE_ROLE_KEY exists:', !!supabaseKey);
 
-    this.supabase = createClient(
-      this.config.get<string>('SUPABASE_URL')!,
-      this.config.get<string>('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('❌ Supabase environment variables are missing');
+    }
+
+    this.supabase = createClient(supabaseUrl, supabaseKey);
 
     this.backendUrl =
-      this.config.get<string>('BACKEND_URL') || 'http://localhost:3000';
+      process.env.BACKEND_URL || 'http://localhost:3000';
   }
 
   // ---------------- LOG ATTEMPTS ----------------
@@ -92,7 +96,6 @@ export class AuthService {
       created_at: new Date().toISOString(),
     });
 
-    // ✅ Production-safe verification link
     const verifyLink = `${this.backendUrl}/auth/verify-email?token=${token}`;
     console.log('📧 VERIFY EMAIL LINK:', verifyLink);
 
@@ -154,7 +157,6 @@ export class AuthService {
       return { statusCode: 400, message: 'Invalid credentials' };
     }
 
-    // 🔐 2FA required
     if (user.two_factor_enabled) {
       return {
         twoFactorRequired: true,
