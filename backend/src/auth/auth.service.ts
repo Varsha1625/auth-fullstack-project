@@ -1,8 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
 import { randomBytes } from 'crypto';
@@ -12,22 +11,20 @@ export class AuthService {
   private supabase: SupabaseClient;
   private backendUrl: string;
 
-  constructor(
-    private config: ConfigService,
-    private jwtService: JwtService
-  ) {
-    // ✅ ALWAYS use process.env on Render
+  constructor(private jwtService: JwtService) {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    console.log('🔎 SUPABASE_URL exists:', !!supabaseUrl);
-    console.log('🔎 SERVICE_ROLE_KEY exists:', !!supabaseKey);
+    console.log('🔎 SUPABASE_URL:', supabaseUrl);
+    console.log('🔎 SERVICE ROLE KEY EXISTS:', !!serviceRoleKey);
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('❌ Supabase environment variables are missing');
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error(
+        'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment variables',
+      );
     }
 
-    this.supabase = createClient(supabaseUrl, supabaseKey);
+    this.supabase = createClient(supabaseUrl, serviceRoleKey);
 
     this.backendUrl =
       process.env.BACKEND_URL || 'http://localhost:3000';
@@ -38,7 +35,7 @@ export class AuthService {
     userId: string | null,
     status: string,
     ip: string,
-    userAgent: string
+    userAgent: string,
   ) {
     try {
       await this.supabase.from('login_attempts').insert({
@@ -57,7 +54,7 @@ export class AuthService {
   async signup(
     { name, email, password },
     ip: string,
-    userAgent: string
+    userAgent: string,
   ) {
     const { data: existing } = await this.supabase
       .from('users')
@@ -87,7 +84,6 @@ export class AuthService {
       throw new BadRequestException('Failed to create user');
     }
 
-    // 🔑 Create email verification token
     const token = randomBytes(32).toString('hex');
 
     await this.supabase.from('email_verification_tokens').insert({
@@ -135,7 +131,7 @@ export class AuthService {
   async signin(
     { email, password },
     ip: string,
-    userAgent: string
+    userAgent: string,
   ) {
     const { data: user } = await this.supabase
       .from('users')
@@ -177,12 +173,7 @@ export class AuthService {
   // ---------------- 2FA SETUP ----------------
   async setup2FA(userId: string) {
     const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(
-      userId,
-      'AuthApp',
-      secret
-    );
-
+    const otpauthUrl = authenticator.keyuri(userId, 'AuthApp', secret);
     const qrCode = await QRCode.toDataURL(otpauthUrl);
 
     await this.supabase
@@ -204,7 +195,7 @@ export class AuthService {
       .eq('id', userId)
       .maybeSingle();
 
-    if (!user || !user.two_factor_secret) {
+    if (!user?.two_factor_secret) {
       throw new BadRequestException('2FA not initialized');
     }
 
@@ -233,7 +224,7 @@ export class AuthService {
       .eq('id', userId)
       .maybeSingle();
 
-    if (!user || !user.two_factor_secret) {
+    if (!user?.two_factor_secret) {
       throw new BadRequestException('Invalid 2FA state');
     }
 
