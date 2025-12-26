@@ -16,6 +16,10 @@ export class AuthService {
     private config: ConfigService,
     private jwtService: JwtService
   ) {
+
+    console.log('🔎 SUPABASE_URL:', process.env.SUPABASE_URL);
+    console.log('🔎 SERVICE_ROLE_KEY EXISTS:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+
     this.supabase = createClient(
       this.config.get<string>('SUPABASE_URL')!,
       this.config.get<string>('SUPABASE_SERVICE_ROLE_KEY')!
