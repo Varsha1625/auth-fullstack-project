@@ -7,6 +7,7 @@
   let message = '';
   let isError = false;
 
+  // ✅ backend URL from env
   const API_URL = import.meta.env.VITE_BACKEND_URL;
 
   async function handleSignin() {
@@ -31,33 +32,30 @@
         body: JSON.stringify({ email, password })
       });
 
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error('Invalid server response');
-      }
-
+      const data = await res.json();
       console.log('SIGNIN RESPONSE:', data);
 
-      // ❌ HTTP / backend errors
+      // ❌ backend / HTTP error
       if (!res.ok) {
-        message = data.message
-          ? `❌ ${data.message}`
-          : '❌ Invalid email or password.';
+        message = data.message || '❌ Invalid email or password.';
         isError = true;
         return;
       }
 
-      // ❌ token missing
-      if (!data.token) {
+      // ✅ FIX: handle correct token keys
+      const token =
+        data.token ||
+        data.access_token ||
+        data?.session?.access_token;
+
+      if (!token) {
         message = '❌ Login failed: token not received.';
         isError = true;
         return;
       }
 
       // ✅ save token
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('token', token);
 
       message = '✅ Login successful! Redirecting...';
 
@@ -70,7 +68,8 @@
         goto('/dashboard');
       }, 800);
 
-    } catch (err: any) {
+    } catch (err) {
+      console.error('SIGNIN ERROR:', err);
       message = '❌ Server unreachable. Please try again later.';
       isError = true;
     } finally {
