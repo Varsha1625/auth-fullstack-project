@@ -1,28 +1,3 @@
-/*import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
-
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
-  // ⭐ VERY IMPORTANT FOR SVELTE + JWT ⭐
-  app.enableCors({
-    origin: "http://localhost:5173",
-    credentials: true,
-    methods: "GET,POST,PUT,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type, Authorization",
-  });
-
-  await app.listen(process.env.PORT || 3000);
-  console.log(`Backend running on port ${process.env.PORT || 3000}`);
-}
-
-bootstrap();*/
-
-
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
@@ -35,7 +10,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:5173',        // local dev
-      'https://frontend-dashboard-87.vercel.app/' // production frontend
+      'https://frontend-dashboard-87.vercel.app' // production frontend
     ],
     credentials: true,
     methods: 'GET,POST,PUT,DELETE,OPTIONS',
