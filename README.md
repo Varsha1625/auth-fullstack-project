@@ -1,9 +1,9 @@
 🔹 Live Demo Badge (Frontend)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://auth-frontend-dashboard.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://frontend-dashboard-87.vercel.app)
 
 
 🔹 Backend API Badge
-[![Backend API](https://img.shields.io/badge/API-Online-blue)](https://auth-backend-ll5o.onrender.com)
+[![Backend API](https://img.shields.io/badge/API-Online-blue)](https://auth-fullstack-project.onrender.com)
 
 A production-style authentication system with secure JWT login, protected APIs, and detailed audit logging.
 Built to demonstrate real-world backend security, API design, and frontend integration.
