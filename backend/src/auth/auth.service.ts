@@ -92,7 +92,7 @@ export class AuthService {
       created_at: new Date().toISOString(),
     });
 
-    const verifyLink = `${this.backendUrl}/auth/verify-email?token=${token}`;
+    const verifyLink = `${this.backendUrl}/verify-email?token=${token}`;
     console.log('📧 VERIFY EMAIL LINK:', verifyLink);
 
     await this.logAttempt(user.id, 'signup_success', ip, userAgent);
