@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcrypt';
@@ -15,17 +19,13 @@ export class AuthService {
     const supabaseUrl = process.env.SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    console.log('🔎 SUPABASE_URL:', supabaseUrl);
-    console.log('🔎 SERVICE ROLE KEY EXISTS:', !!serviceRoleKey);
-
     if (!supabaseUrl || !serviceRoleKey) {
       throw new Error(
-        'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment variables',
+        'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
       );
     }
 
     this.supabase = createClient(supabaseUrl, serviceRoleKey);
-
     this.backendUrl =
       process.env.BACKEND_URL || 'http://localhost:3000';
   }
@@ -63,7 +63,7 @@ export class AuthService {
       .maybeSingle();
 
     if (existing) {
-      return { statusCode: 400, message: 'Email already registered' };
+      throw new BadRequestException('Email already registered');
     }
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -111,7 +111,9 @@ export class AuthService {
       .maybeSingle();
 
     if (!record) {
-      throw new BadRequestException('Invalid or expired verification token');
+      throw new BadRequestException(
+        'Invalid or expired verification token',
+      );
     }
 
     await this.supabase
@@ -140,17 +142,26 @@ export class AuthService {
       .maybeSingle();
 
     if (!user) {
-      return { statusCode: 400, message: 'Invalid credentials' };
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     if (!user.verified) {
-      return { statusCode: 400, message: 'Verify your email first' };
+      throw new BadRequestException('Verify your email first');
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
+    const valid = await bcrypt.compare(
+      password,
+      user.password_hash,
+    );
+
     if (!valid) {
-      await this.logAttempt(user.id, 'wrong_password', ip, userAgent);
-      return { statusCode: 400, message: 'Invalid credentials' };
+      await this.logAttempt(
+        user.id,
+        'wrong_password',
+        ip,
+        userAgent,
+      );
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     if (user.two_factor_enabled) {
@@ -167,13 +178,26 @@ export class AuthService {
     });
 
     await this.logAttempt(user.id, 'signin_success', ip, userAgent);
-    return { token, user };
+
+    return {
+      message: 'Login successful',
+      token, // ✅ FRONTEND NEEDS THIS
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    };
   }
 
   // ---------------- 2FA SETUP ----------------
   async setup2FA(userId: string) {
     const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(userId, 'AuthApp', secret);
+    const otpauthUrl = authenticator.keyuri(
+      userId,
+      'AuthApp',
+      secret,
+    );
     const qrCode = await QRCode.toDataURL(otpauthUrl);
 
     await this.supabase
@@ -242,6 +266,21 @@ export class AuthService {
       email: user.email,
     });
 
-    return { token, user };
+    await this.logAttempt(
+      user.id,
+      'signin_success_2fa',
+      'unknown',
+      'unknown',
+    );
+
+    return {
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    };
   }
 }
