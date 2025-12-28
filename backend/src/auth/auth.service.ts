@@ -1,19 +1,17 @@
-import {
-  Injectable,
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as bcrypt from 'bcrypt';
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
 import { randomBytes } from 'crypto';
+import { Resend } from 'resend';
 
 @Injectable()
 export class AuthService {
   private supabase: SupabaseClient;
   private backendUrl: string;
+  private resend: Resend;
 
   constructor(private jwtService: JwtService) {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -26,8 +24,11 @@ export class AuthService {
     }
 
     this.supabase = createClient(supabaseUrl, serviceRoleKey);
+
     this.backendUrl =
       process.env.BACKEND_URL || 'http://localhost:3000';
+
+    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
   // ---------------- LOG ATTEMPTS ----------------
@@ -63,7 +64,7 @@ export class AuthService {
       .maybeSingle();
 
     if (existing) {
-      throw new BadRequestException('Email already registered');
+      return { statusCode: 400, message: 'Email already registered' };
     }
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -92,8 +93,19 @@ export class AuthService {
       created_at: new Date().toISOString(),
     });
 
-    const verifyLink = `${this.backendUrl}/verify-email?token=${token}`;
-    console.log('📧 VERIFY EMAIL LINK:', verifyLink);
+    const verifyLink = `${this.backendUrl}/auth/verify-email?token=${token}`;
+
+    // ✅ SEND REAL EMAIL
+    await this.resend.emails.send({
+      from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+      to: email,
+      subject: 'Verify your email',
+      html: `
+        <h2>Email Verification</h2>
+        <p>Click the link below to verify your email:</p>
+        <a href="${verifyLink}">${verifyLink}</a>
+      `,
+    });
 
     await this.logAttempt(user.id, 'signup_success', ip, userAgent);
 
@@ -111,9 +123,7 @@ export class AuthService {
       .maybeSingle();
 
     if (!record) {
-      throw new BadRequestException(
-        'Invalid or expired verification token',
-      );
+      throw new BadRequestException('Invalid or expired verification token');
     }
 
     await this.supabase
@@ -142,26 +152,17 @@ export class AuthService {
       .maybeSingle();
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      return { statusCode: 400, message: 'Invalid credentials' };
     }
 
     if (!user.verified) {
-      throw new BadRequestException('Verify your email first');
+      return { statusCode: 400, message: 'Verify your email first' };
     }
 
-    const valid = await bcrypt.compare(
-      password,
-      user.password_hash,
-    );
-
+    const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
-      await this.logAttempt(
-        user.id,
-        'wrong_password',
-        ip,
-        userAgent,
-      );
-      throw new UnauthorizedException('Invalid credentials');
+      await this.logAttempt(user.id, 'wrong_password', ip, userAgent);
+      return { statusCode: 400, message: 'Invalid credentials' };
     }
 
     if (user.two_factor_enabled) {
@@ -179,25 +180,13 @@ export class AuthService {
 
     await this.logAttempt(user.id, 'signin_success', ip, userAgent);
 
-    return {
-      message: 'Login successful',
-      token, // ✅ FRONTEND NEEDS THIS
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-    };
+    return { token };
   }
 
   // ---------------- 2FA SETUP ----------------
   async setup2FA(userId: string) {
     const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(
-      userId,
-      'AuthApp',
-      secret,
-    );
+    const otpauthUrl = authenticator.keyuri(userId, 'AuthApp', secret);
     const qrCode = await QRCode.toDataURL(otpauthUrl);
 
     await this.supabase
@@ -238,49 +227,5 @@ export class AuthService {
       .eq('id', userId);
 
     return { message: '2FA enabled successfully' };
-  }
-
-  // ---------------- VERIFY 2FA LOGIN ----------------
-  async verify2FALogin(userId: string, otp: string) {
-    const { data: user } = await this.supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (!user?.two_factor_secret) {
-      throw new BadRequestException('Invalid 2FA state');
-    }
-
-    const valid = authenticator.verify({
-      token: otp,
-      secret: user.two_factor_secret,
-    });
-
-    if (!valid) {
-      throw new BadRequestException('Invalid OTP');
-    }
-
-    const token = await this.jwtService.signAsync({
-      sub: user.id,
-      email: user.email,
-    });
-
-    await this.logAttempt(
-      user.id,
-      'signin_success_2fa',
-      'unknown',
-      'unknown',
-    );
-
-    return {
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-    };
   }
 }
