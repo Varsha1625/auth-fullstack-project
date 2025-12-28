@@ -35,29 +35,26 @@
       const data = await res.json();
       console.log('SIGNIN RESPONSE:', data);
 
-      // ✅ EMAIL NOT VERIFIED (IMPORTANT FIX)
-      if (data?.message === 'Verify your email first') {
-        message =
-          '📧 Please verify your email first. Check your inbox or spam folder.';
-        isError = true;
-        return;
-      }
-
-      // ❌ OTHER BACKEND / HTTP ERRORS
+      // ❌ BACKEND / HTTP ERRORS
       if (!res.ok) {
-        message = data?.message || '❌ Invalid email or password.';
+        if (data?.message === 'Verify your email first') {
+          message =
+            '📧 Please verify your email first. Check your inbox or spam folder.';
+        } else {
+          message = data?.message || '❌ Invalid email or password.';
+        }
         isError = true;
         return;
       }
 
-      // ✅ FIX: handle different token keys safely
+      // ✅ TOKEN (only after success)
       const token =
         data.token ||
         data.access_token ||
         data?.session?.access_token;
 
       if (!token) {
-        message = '❌ Login failed: token not received.';
+        message = '❌ Login failed. Token missing.';
         isError = true;
         return;
       }
