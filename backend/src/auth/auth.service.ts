@@ -16,6 +16,11 @@ export class AuthService {
   constructor(private jwtService: JwtService) {
     const supabaseUrl = process.env.SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const resendKey = process.env.RESEND_API_KEY;
+
+    console.log('🔎 SUPABASE_URL:', supabaseUrl);
+    console.log('🔎 SERVICE ROLE KEY EXISTS:', !!serviceRoleKey);
+    console.log('🔎 RESEND_API_KEY EXISTS:', !!resendKey);
 
     if (!supabaseUrl || !serviceRoleKey) {
       throw new Error(
@@ -23,12 +28,16 @@ export class AuthService {
       );
     }
 
+    if (!resendKey) {
+      throw new Error('Missing RESEND_API_KEY');
+    }
+
     this.supabase = createClient(supabaseUrl, serviceRoleKey);
 
     this.backendUrl =
       process.env.BACKEND_URL || 'http://localhost:3000';
 
-    this.resend = new Resend(process.env.RESEND_API_KEY);
+    this.resend = new Resend(resendKey);
   }
 
   // ---------------- LOG ATTEMPTS ----------------
@@ -95,17 +104,29 @@ export class AuthService {
 
     const verifyLink = `${this.backendUrl}/auth/verify-email?token=${token}`;
 
-    // ✅ SEND REAL EMAIL
-    await this.resend.emails.send({
-      from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
-      to: email,
-      subject: 'Verify your email',
-      html: `
-        <h2>Email Verification</h2>
-        <p>Click the link below to verify your email:</p>
-        <a href="${verifyLink}">${verifyLink}</a>
-      `,
-    });
+    console.log('📧 VERIFY LINK:', verifyLink);
+    console.log('📨 Sending email to:', email);
+
+    // ✅ SEND EMAIL WITH DEBUG LOGGING
+    try {
+      const result = await this.resend.emails.send({
+        from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+        to: email,
+        subject: 'Verify your email',
+        html: `
+          <h2>Email Verification</h2>
+          <p>Click the link below to verify your email:</p>
+          <a href="${verifyLink}">${verifyLink}</a>
+        `,
+      });
+
+      console.log('✅ Email sent successfully:', result);
+    } catch (err) {
+      console.error('❌ Email sending failed:', err);
+      throw new BadRequestException(
+        'Signup succeeded but email could not be sent',
+      );
+    }
 
     await this.logAttempt(user.id, 'signup_success', ip, userAgent);
 
