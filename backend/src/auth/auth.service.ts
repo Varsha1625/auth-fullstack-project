@@ -16,7 +16,6 @@ export class AuthService {
   constructor(private jwtService: JwtService) {
     const supabaseUrl = process.env.SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const resendKey = process.env.RESEND_API_KEY;
 
     if (!supabaseUrl || !serviceRoleKey) {
       throw new Error(
@@ -24,15 +23,12 @@ export class AuthService {
       );
     }
 
-    if (!resendKey) {
-      throw new Error('Missing RESEND_API_KEY');
-    }
-
     this.supabase = createClient(supabaseUrl, serviceRoleKey);
+
     this.backendUrl =
       process.env.BACKEND_URL || 'http://localhost:3000';
 
-    this.resend = new Resend(resendKey);
+    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
   // ---------------- LOG ATTEMPTS ----------------
@@ -50,13 +46,17 @@ export class AuthService {
         user_agent: userAgent,
         created_at: new Date().toISOString(),
       });
-    } catch {
-      // silent fail
+    } catch (err) {
+      console.warn('⚠️ Failed to log attempt:', err);
     }
   }
 
   // ---------------- SIGNUP ----------------
-  async signup({ name, email, password }, ip: string, userAgent: string) {
+  async signup(
+    { name, email, password },
+    ip: string,
+    userAgent: string,
+  ) {
     const { data: existing } = await this.supabase
       .from('users')
       .select('id')
@@ -69,7 +69,7 @@ export class AuthService {
 
     const password_hash = await bcrypt.hash(password, 10);
 
-    const { data: user } = await this.supabase
+    const { data: user, error } = await this.supabase
       .from('users')
       .insert({
         name,
@@ -81,6 +81,10 @@ export class AuthService {
       .select()
       .single();
 
+    if (error || !user) {
+      throw new BadRequestException('Failed to create user');
+    }
+
     const token = randomBytes(32).toString('hex');
 
     await this.supabase.from('email_verification_tokens').insert({
@@ -91,16 +95,23 @@ export class AuthService {
 
     const verifyLink = `${this.backendUrl}/auth/verify-email?token=${token}`;
 
-    await this.resend.emails.send({
-      from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
-      to: email,
-      subject: 'Verify your email',
-      html: `
-        <h2>Email Verification</h2>
-        <p>Click below to verify your email:</p>
-        <a href="${verifyLink}">${verifyLink}</a>
-      `,
-    });
+    // ✅ SEND EMAIL (REAL)
+    try {
+      const response = await this.resend.emails.send({
+        from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+        to: email,
+        subject: 'Verify your email',
+        html: `
+          <h2>Email Verification</h2>
+          <p>Please click the link below to verify your email:</p>
+          <a href="${verifyLink}">${verifyLink}</a>
+        `,
+      });
+
+      console.log('📨 Email sent:', response);
+    } catch (err) {
+      console.error('❌ Email sending failed:', err);
+    }
 
     await this.logAttempt(user.id, 'signup_success', ip, userAgent);
 
@@ -135,7 +146,11 @@ export class AuthService {
   }
 
   // ---------------- SIGNIN ----------------
-  async signin({ email, password }, ip: string, userAgent: string) {
+  async signin(
+    { email, password },
+    ip: string,
+    userAgent: string,
+  ) {
     const { data: user } = await this.supabase
       .from('users')
       .select('*')
@@ -152,6 +167,7 @@ export class AuthService {
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
+      await this.logAttempt(user.id, 'wrong_password', ip, userAgent);
       return { statusCode: 400, message: 'Invalid credentials' };
     }
 
@@ -190,7 +206,7 @@ export class AuthService {
     return { qrCode, manualKey: secret };
   }
 
-  // ---------------- CONFIRM 2FA SETUP ----------------
+  // ---------------- CONFIRM 2FA ----------------
   async verify2FASetup(userId: string, otp: string) {
     const { data: user } = await this.supabase
       .from('users')
@@ -219,7 +235,7 @@ export class AuthService {
     return { message: '2FA enabled successfully' };
   }
 
-  // ---------------- VERIFY 2FA LOGIN (🔥 RESTORED) ----------------
+  // ---------------- VERIFY 2FA LOGIN (RESTORED) ----------------
   async verify2FALogin(userId: string, otp: string) {
     const { data: user } = await this.supabase
       .from('users')
