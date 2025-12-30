@@ -8,7 +8,6 @@
   let message = '';
   let isError = false;
 
-  // ✅ backend URL from env
   const API_URL = import.meta.env.VITE_BACKEND_URL;
 
   async function handleSignup() {
@@ -16,9 +15,8 @@
     message = '';
     isError = false;
 
-    // ✅ handle no internet
     if (!navigator.onLine) {
-      message = '❌ No internet connection. Please check your network.';
+      message = '❌ No internet connection.';
       isError = true;
       loading = false;
       return;
@@ -27,45 +25,33 @@
     try {
       const res = await fetch(`${API_URL}/auth/signup`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password })
       });
 
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error('Invalid server response');
-      }
+      const data = await res.json();
 
       if (!res.ok) {
-        message = data.message
-          ? `❌ ${data.message}`
-          : '❌ Signup failed. Please try again.';
+        message = data?.message || '❌ Signup failed.';
         isError = true;
         return;
       }
 
-      // ✅ success message
+      // ✅ Supabase sends verification email automatically
       message =
-        data.message ||
-        '✅ Signup successful! Please verify your email before signing in.';
+        '📧 Signup successful! Please check your email to verify your account.';
 
-      // clear form
       name = '';
       email = '';
       password = '';
 
-      // redirect after delay
       setTimeout(() => {
         goto('/signin');
-      }, 5000);
+      }, 4000);
 
-    } catch (err: any) {
-      message =
-        '❌ Server is unreachable. Please try again later.';
+    } catch (err) {
+      console.error(err);
+      message = '❌ Server unreachable.';
       isError = true;
     } finally {
       loading = false;
@@ -77,31 +63,12 @@
   <h1 class="text-3xl font-bold mb-6 text-center">Create Account</h1>
 
   <div class="space-y-4">
-    <input
-      class="w-full p-3 border rounded-lg"
-      placeholder="Full Name"
-      bind:value={name}
-      required
-    />
-
-    <input
-      class="w-full p-3 border rounded-lg"
-      placeholder="Email"
-      type="email"
-      bind:value={email}
-      required
-    />
-
-    <input
-      class="w-full p-3 border rounded-lg"
-      placeholder="Password"
-      type="password"
-      bind:value={password}
-      required
-    />
+    <input class="w-full p-3 border rounded-lg" placeholder="Full Name" bind:value={name} />
+    <input class="w-full p-3 border rounded-lg" placeholder="Email" type="email" bind:value={email} />
+    <input class="w-full p-3 border rounded-lg" placeholder="Password" type="password" bind:value={password} />
 
     <button
-      class="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+      class="w-full p-3 bg-blue-600 text-white rounded-lg disabled:bg-gray-400"
       on:click={handleSignup}
       disabled={loading}
     >
@@ -109,11 +76,9 @@
     </button>
 
     {#if message}
-      <p
-        class="text-center mt-3 font-medium"
-        class:text-red-600={isError}
-        class:text-green-600={!isError}
-      >
+      <p class="text-center mt-3 font-medium"
+         class:text-red-600={isError}
+         class:text-green-600={!isError}>
         {message}
       </p>
     {/if}
