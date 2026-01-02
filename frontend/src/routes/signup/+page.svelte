@@ -37,7 +37,6 @@
         return;
       }
 
-      // ✅ Supabase sends verification email automatically
       message =
         '📧 Signup successful! You can now sign in';
 

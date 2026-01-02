@@ -31,28 +31,21 @@
       const data = await res.json();
       console.log('SIGNIN RESPONSE:', data);
 
-      // ❌ Email not verified
-      if (data?.message === 'Verify your email first') {
-        message =
-          '📧 Please verify your email first. Open the link sent to your inbox.';
-        isError = true;
-        return;
-      }
-
-      // ❌ Other errors
+      // ❌ Backend / auth errors only
       if (!res.ok) {
         message = data?.message || '❌ Invalid email or password.';
         isError = true;
         return;
       }
 
-      // ✅ Token received from backend
+      // ❌ Token missing
       if (!data.token) {
         message = '❌ Login failed. Token missing.';
         isError = true;
         return;
       }
 
+      // ✅ Success
       localStorage.setItem('token', data.token);
 
       message = '✅ Login successful! Redirecting...';
@@ -78,8 +71,29 @@
   <h1 class="text-3xl font-bold mb-6 text-center">Welcome Back</h1>
 
   <div class="space-y-4">
-    <input class="w-full p-3 border rounded-lg" placeholder="Email" type="email" bind:value={email} />
-    <input class="w-full p-3 border rounded-lg" placeholder="Password" type="password" bind:value={password} />
+    <input
+      class="w-full p-3 border rounded-lg"
+      placeholder="Email"
+      type="email"
+      bind:value={email}
+    />
+
+    <input
+      class="w-full p-3 border rounded-lg"
+      placeholder="Password"
+      type="password"
+      bind:value={password}
+    />
+
+    <!-- ✅ Forgot Password -->
+    <div class="text-right">
+      <a
+        href="/forgot-password"
+        class="text-sm text-blue-600 hover:underline"
+      >
+        Forgot password?
+      </a>
+    </div>
 
     <button
       class="w-full p-3 bg-green-600 text-white rounded-lg disabled:bg-gray-400"
@@ -90,9 +104,11 @@
     </button>
 
     {#if message}
-      <p class="text-center mt-4 font-medium"
-         class:text-red-600={isError}
-         class:text-green-600={!isError}>
+      <p
+        class="text-center mt-4 font-medium"
+        class:text-red-600={isError}
+        class:text-green-600={!isError}
+      >
         {message}
       </p>
     {/if}
