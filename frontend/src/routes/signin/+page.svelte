@@ -1,3 +1,4 @@
+<h1 style="color:red; font-size:40px;">SIGNIN PAGE TEST</h1>
 <script lang="ts">
   import { goto } from '$app/navigation';
 
