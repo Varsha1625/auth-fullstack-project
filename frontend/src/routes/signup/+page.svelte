@@ -39,7 +39,7 @@
 
       // ✅ Supabase sends verification email automatically
       message =
-        '📧 Signup successful! Please check your email to verify your account.';
+        '📧 Signup successful! You can now sign in';
 
       name = '';
       email = '';
