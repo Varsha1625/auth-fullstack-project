@@ -1,37 +1,81 @@
-<h1 style="color:red; font-size:40px;">SIGNIN PAGE TEST</h1>
-<script lang="ts">
+  <script lang="ts">
   import { goto } from '$app/navigation';
 
   let email = '';
   let password = '';
+  let loading = false;
+  let message = '';
+  let isError = false;
+
+  const API_URL = import.meta.env.VITE_BACKEND_URL;
+
+  async function handleSignin() {
+    loading = true;
+    message = '';
+    isError = false;
+
+    try {
+      const res = await fetch(`${API_URL}/auth/signin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        message = data?.message || 'Invalid email or password';
+        isError = true;
+        return;
+      }
+
+      localStorage.setItem('token', data.token);
+      goto('/dashboard');
+
+    } catch {
+      message = 'Server unreachable';
+      isError = true;
+    } finally {
+      loading = false;
+    }
+  }
 </script>
 
-<div style="max-width:400px;margin:100px auto;padding:20px;border:2px solid black;">
-  <h1 style="font-size:30px;font-weight:bold;">Sign In</h1>
+<div class="max-w-md mx-auto mt-20 p-6 rounded-2xl shadow-xl bg-white">
+  <h1 class="text-3xl font-bold mb-6 text-center">Welcome Back</h1>
 
   <input
+    class="w-full p-3 border rounded-lg mb-3"
     placeholder="Email"
+    type="email"
     bind:value={email}
-    style="display:block;width:100%;margin-top:20px;padding:10px;border:1px solid black;"
   />
 
   <input
-    type="password"
+    class="w-full p-3 border rounded-lg mb-2"
     placeholder="Password"
+    type="password"
     bind:value={password}
-    style="display:block;width:100%;margin-top:10px;padding:10px;border:1px solid black;"
   />
 
-  <!-- 🔴 THIS CANNOT BE HIDDEN -->
-  <div style="margin-top:10px;">
-    <a href="/forgot-password" style="color:blue;text-decoration:underline;">
+  <!-- ✅ FORGOT PASSWORD (VISIBLE GUARANTEED) -->
+  <div class="text-right mb-4">
+    <a href="/forgot-password" class="text-sm text-blue-600 hover:underline">
       Forgot password?
     </a>
   </div>
 
   <button
-    style="margin-top:20px;padding:10px;width:100%;background:black;color:white;"
+    class="w-full p-3 bg-green-600 text-white rounded-lg"
+    on:click={handleSignin}
+    disabled={loading}
   >
-    Sign In
+    {loading ? 'Logging in...' : 'Sign In'}
   </button>
+
+  {#if message}
+    <p class="text-center mt-4" class:text-red-600={isError}>
+      {message}
+    </p>
+  {/if}
 </div>
