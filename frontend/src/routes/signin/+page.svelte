@@ -31,21 +31,18 @@
       const data = await res.json();
       console.log('SIGNIN RESPONSE:', data);
 
-      // ❌ Backend / auth errors only
       if (!res.ok) {
         message = data?.message || '❌ Invalid email or password.';
         isError = true;
         return;
       }
 
-      // ❌ Token missing
       if (!data.token) {
         message = '❌ Login failed. Token missing.';
         isError = true;
         return;
       }
 
-      // ✅ Success
       localStorage.setItem('token', data.token);
 
       message = '✅ Login successful! Redirecting...';
@@ -76,6 +73,7 @@
       placeholder="Email"
       type="email"
       bind:value={email}
+      required
     />
 
     <input
@@ -83,9 +81,10 @@
       placeholder="Password"
       type="password"
       bind:value={password}
+      required
     />
 
-    <!-- ✅ Forgot Password -->
+    <!-- ✅ FORGOT PASSWORD LINK (FIXED & VISIBLE) -->
     <div class="text-right">
       <a
         href="/forgot-password"
@@ -96,7 +95,7 @@
     </div>
 
     <button
-      class="w-full p-3 bg-green-600 text-white rounded-lg disabled:bg-gray-400"
+      class="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
       on:click={handleSignin}
       disabled={loading}
     >
