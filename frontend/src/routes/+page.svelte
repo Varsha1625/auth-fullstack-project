@@ -4,8 +4,6 @@
 </script>
 
 <div class="min-h-screen flex flex-col justify-center items-center bg-gray-100"> 
-	<!-- <h1 class="text-4xl font-bold mb-6">Welcome to SecureAuth</h1> -->
-
 	<div class="space-x-4">
 		<button
 			on:click={() => goto('/signup')}

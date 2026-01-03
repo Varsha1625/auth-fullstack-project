@@ -1,4 +1,4 @@
-  <script lang="ts">
+ <script lang="ts">
   import { goto } from '$app/navigation';
 
   let email = '';
@@ -60,9 +60,13 @@
 
   <!-- ✅ FORGOT PASSWORD (VISIBLE GUARANTEED) -->
   <div class="text-right mb-4">
-    <a href="/forgot-password" class="text-sm text-blue-600 hover:underline">
+      <button
+    type="button"
+    on:click={() => goto('/forgot-password')}
+    class="text-sm text-blue-600 hover:underline"
+      >
       Forgot password?
-    </a>
+      </button>
   </div>
 
   <button
