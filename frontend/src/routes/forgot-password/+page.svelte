@@ -1,81 +1,65 @@
 <script lang="ts">
+  import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
 
   let email = '';
-  let password = '';
-  let loading = false;
   let message = '';
-  let isError = false;
+  let error = '';
+  let loading = false;
 
-  const API_URL = import.meta.env.VITE_BACKEND_URL;
-
-  async function handleSignin() {
+  async function sendResetLink() {
     loading = true;
     message = '';
-    isError = false;
+    error = '';
 
-    try {
-      const res = await fetch(`${API_URL}/auth/signin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        message = data?.message || 'Invalid email or password';
-        isError = true;
-        return;
-      }
-
-      localStorage.setItem('token', data.token);
-      goto('/dashboard');
-
-    } catch {
-      message = 'Server unreachable';
-      isError = true;
-    } finally {
-      loading = false;
+    if (err) {
+      error = err.message;
+    } else {
+      message = '✅ Password reset link sent. Check your email.';
     }
+
+    loading = false;
   }
 </script>
 
-<div class="max-w-md mx-auto mt-20 p-6 rounded-2xl shadow-xl bg-white">
-  <h1 class="text-3xl font-bold mb-6 text-center">Welcome Back</h1>
+<div class="max-w-md mx-auto mt-20 p-6 bg-white rounded-xl shadow">
+  <h1 class="text-2xl font-bold mb-4">Forgot Password</h1>
 
   <input
-    class="w-full p-3 border rounded-lg mb-3"
-    placeholder="Email"
     type="email"
+    class="w-full p-3 border rounded mb-3"
+    placeholder="Enter your email"
     bind:value={email}
   />
 
-  <input
-    class="w-full p-3 border rounded-lg mb-2"
-    placeholder="Password"
-    type="password"
-    bind:value={password}
-  />
-
-  <!-- ✅ FORGOT PASSWORD (VISIBLE GUARANTEED) -->
-  <div class="text-right mb-4">
-    <a href="/forgot-password" class="text-sm text-blue-600 hover:underline">
-      Forgot password?
-    </a>
-  </div>
-
   <button
-    class="w-full p-3 bg-green-600 text-white rounded-lg"
-    on:click={handleSignin}
+    type="button"
+    class="w-full p-3 bg-blue-600 text-white rounded"
+    on:click={sendResetLink}
     disabled={loading}
   >
-    {loading ? 'Logging in...' : 'Sign In'}
+    {loading ? 'Sending...' : 'Send Reset Link'}
   </button>
 
   {#if message}
-    <p class="text-center mt-4" class:text-red-600={isError}>
-      {message}
-    </p>
+    <p class="text-green-600 mt-4">{message}</p>
   {/if}
+
+  {#if error}
+    <p class="text-red-600 mt-4">{error}</p>
+  {/if}
+
+  <div class="mt-4 text-center">
+    <button
+      type="button"
+      class="text-blue-600 underline"
+      on:click={() => goto('/signin')}
+    >
+      Back to Sign In
+    </button>
+  </div>
 </div>
