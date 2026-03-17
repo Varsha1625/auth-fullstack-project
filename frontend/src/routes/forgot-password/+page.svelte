@@ -1,29 +1,40 @@
 <script lang="ts">
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-
-  let email = '';
-  let message = '';
-  let error = '';
-  let loading = false;
+  
+  let email:string = "";
+  let message:string = "";
+  let error:string = "";
+  let loading:boolean = false;
 
   async function sendResetLink() {
     loading = true;
     message = '';
     error = '';
 
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
+    try{
+      if(!email){
+        error = "Email is required";
+        loading = false;
+        return;
+      }
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo:'https:fronted-dashboard-87.vercel.app/reset-password'
     });
 
-    if (err) {
-      error = err.message;
-    } else {
+    if (resetError) {
+      throw resetError;
+    } 
       message = '✅ Password reset link sent. Check your email.';
-    }
+  } catch(e:any){
+    console.error("RESET ERROR:",e);
+    error = e?.message||"Error sending recovery email";
+  }finally{
 
     loading = false;
   }
+}
 </script>
 
 <div class="max-w-md mx-auto mt-20 p-6 bg-white rounded-xl shadow">

@@ -2,21 +2,53 @@
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
 
-  let password = '';
-  let message = '';
-  let error = '';
+  let password:string = '';
+  let confirmPassword:string = '';
+  let message:string = '';
+  let error:string = '';
+  let loading:boolean = false;
 
-  async function updatePassword() {
-    const { error: err } = await supabase.auth.updateUser({
-      password
-    });
-
-    if (err) error = err.message;
-    else {
-      message = '✅ Password updated successfully';
-      setTimeout(() => goto('/signin'), 2000);
-    }
+  async function updatePassword(){
+    loading = true;
+    message = '';
+    error = '';
+    
+    try{
+      
+      if(!password ||!confirmPassword){
+        error = "All fields are required";
+        loading = false;
+        return;
   }
+      if(password !== confirmPassword){
+        error = "Passwords do not match";
+        loading = false;
+        return;
+  }
+      if(password.length < 8){
+        error = "Password must be atleast 8 characters";
+        loading = false;
+        return;
+  }
+    const{error: updateError} = await supabase.auth.updateUser({password:password});
+
+    if(updateError){
+      throw updateError;
+    }
+
+    message = 'Password updated successfully';
+
+    setTimeout(() => {
+      goto('/signin');
+    },2000);
+
+  }catch(e:any){
+     console.error("RESET PASSWORD ERROR:",e);
+     error = e?.message||"Failed to update password";
+  }finally{
+    loading = false;
+  }
+}
 </script>
 
 <div class="max-w-md mx-auto mt-20 p-6 bg-white rounded-xl shadow">
@@ -29,11 +61,19 @@
     bind:value={password}
   />
 
+  <input
+    type="password"
+    class="w-full p-3 border rounded mb-3"
+    placeholder="Confirm password"
+    bind:value={confirmPassword}
+  />
+
   <button
     class="w-full p-3 bg-green-600 text-white rounded"
     on:click={updatePassword}
+    disabled = {loading}
   >
-    Update Password
+    {loading? "Updating....":"Update Password"}
   </button>
 
   {#if message}
