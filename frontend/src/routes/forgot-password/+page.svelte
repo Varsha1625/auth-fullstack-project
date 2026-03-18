@@ -20,7 +20,7 @@
       }
 
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo:'https:fronted-dashboard-87.vercel.app/reset-password'
+      redirectTo:'https://fronted-dashboard-87.vercel.app/reset-password'
     });
 
     if (resetError) {
