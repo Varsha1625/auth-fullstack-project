@@ -8,6 +8,18 @@
   let error:string = '';
   let loading:boolean = false;
 
+  let showPassword = false;
+  let showConfirmPassword = false;
+
+  /*Live Password Rules*/
+   $:length = password.length>=8;
+   $:uppercase = /[A-Z]/.test(password);
+   $:lowercase = /[a-z]/.test(password);
+   $:number =/[0-9]/.test(password);
+   $:special = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+   $:validPassword = length && uppercase && lowercase && number && special ;
+
   async function updatePassword(){
     loading = true;
     message = '';
@@ -16,20 +28,24 @@
     try{
       
       if(!password ||!confirmPassword){
-        error = "All fields are required";
+        error = "❌All fields are required";
         loading = false;
         return;
-  }
+      }
+
+      if(!validPassword){
+        error = "❌ Passwords does not meet requirements";
+        loading = false;
+        return;
+      }
+
+
       if(password !== confirmPassword){
         error = "Passwords do not match";
         loading = false;
         return;
-  }
-      if(password.length < 8){
-        error = "Password must be atleast 8 characters";
-        loading = false;
-        return;
-  }
+      }
+  
     const{error: updateError} = await supabase.auth.updateUser({password:password});
 
     if(updateError){
@@ -51,36 +67,84 @@
 }
 </script>
 
-<div class="max-w-md mx-auto mt-20 p-6 bg-white rounded-xl shadow">
-  <h1 class="text-2xl font-bold mb-4">Reset Password</h1>
+<div class="max-w-md mx-auto mt-20 p-6 bg-white rounded-2xl shadow-xl">
+  <h1 class="text-2xl font-bold mb-4 text-center">Reset Password</h1>
 
-  <input
-    type="password"
-    class="w-full p-3 border rounded mb-3"
+
+  <!--New Password-->
+  <div class="relative mb-3">
+   <input
+    type={showPassword ? "text": "password"}
+    class="w-full p-3 border rounded"
     placeholder="New password"
     bind:value={password}
-  />
+   />
 
+   <button
+    type="button"
+    class="absolute right-3 top-3 text-sm text-blue-600"
+    on:click={() => showPassword = !showPassword}
+   >
+    {showPassword ? "Hide":"Show"}
+   </button>
+</div>
+
+  <!--Confirm Password-->
+  <div class="relative mb-3">
   <input
-    type="password"
-    class="w-full p-3 border rounded mb-3"
+    type={showConfirmPassword ? "text":"password"}
+    class="w-full p-3 border rounded"
     placeholder="Confirm password"
     bind:value={confirmPassword}
   />
 
   <button
-    class="w-full p-3 bg-green-600 text-white rounded"
-    on:click={updatePassword}
-    disabled = {loading}
+    type="button"
+    class="absolute right-3 top-3 text-sm text-blue-600"
+    on:click={() => showConfirmPassword =! showConfirmPassword}
   >
-    {loading? "Updating....":"Update Password"}
+    {showConfirmPassword ? "Hide":"Show"}
+  </button>
+  </div>
+
+  <!--Password  Rules-->
+  <div class="text-sm space-y-1 mb-4">
+    <p class={length ? "text-green-600": "text-red-600"}>
+       .Minimum 8 characters
+    </p>
+
+    <p class={uppercase ? "text-green-600": "text-red-600"}>
+       .One uppercase letter
+    </p>
+
+    
+    <p class={lowercase ? "text-green-600": "text-red-600"}>
+       .One lowercase letter
+    </p>
+ 
+    <p class={number ? "text-green-600": "text-red-600"}>
+       .One number
+    </p>
+
+    <p class={special ? "text-green-600": "text-red-600"}>
+       .One special character
+    </p>
+  </div>
+
+  <!--Button-->
+  <button
+    class="w-full p-3 bg-green-600 text-white rounded hover:bg-green-700"
+    on:click={updatePassword}
+    disabled ={loading}
+    >
+      {loading ?"Updating....":"Update Password"}
   </button>
 
   {#if message}
-    <p class="text-green-600 mt-4">{message}</p>
+    <p class="text-green-600 mt-4 text-center">{message}</p>
   {/if}
 
   {#if error}
-    <p class="text-red-600 mt-4">{error}</p>
+    <p class="text-red-600 mt-4 text-center">{error}</p>
   {/if}
 </div>
