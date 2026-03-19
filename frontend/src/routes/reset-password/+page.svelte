@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { onMount } from "svelte"
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
+    import { ref } from "process";
 
   let password:string = '';
   let confirmPassword:string = '';
@@ -10,6 +12,29 @@
 
   let showPassword = false;
   let showConfirmPassword = false;
+
+  onMount(async() => {
+    const hash = window.location.hash;
+
+    if(hash){
+      const params = new URLSearchParams(hash.substring(1));
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+
+         if(access_token && refresh_token){
+          const{error}= await supabase.auth.setSession({
+            access_token,
+            refresh_token
+          });
+
+          if(error){
+            console.error("Session set error:",error);
+          }else{
+            console.log("✅ Session set successfully");
+          }
+         }
+      }
+  });
 
   /*Live Password Rules*/
    $:length = password.length>=8;

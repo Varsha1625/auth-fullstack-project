@@ -179,7 +179,8 @@
       </li>
      </ul>
 
-     <!-- Strength Bar-->
+     <!-- Str
+      ength Bar-->
       <div class="h-2 bg-gray-200 rounded mt-2">
         <div
           class="h-2 rounded transition-all bg-blue-500"
