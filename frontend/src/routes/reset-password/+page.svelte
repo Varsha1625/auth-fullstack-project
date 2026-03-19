@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte"
+  import { onMount } from "svelte";
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
-    import { ref } from "process";
 
   let password:string = '';
   let confirmPassword:string = '';
@@ -12,6 +11,8 @@
 
   let showPassword = false;
   let showConfirmPassword = false;
+
+  let sessionReady = false;
 
   onMount(async() => {
     const hash = window.location.hash;
@@ -34,7 +35,17 @@
           }
          }
       }
-  });
+
+      //VERIFY SESSION
+      const {data} = await supabase.auth.getSession();
+
+      if(data.session){
+        sessionReady = true;
+        console.log("Session exists");
+      }else{
+        console.log("No session found");
+      }
+      });
 
   /*Live Password Rules*/
    $:length = password.length>=8;
@@ -160,7 +171,7 @@
   <button
     class="w-full p-3 bg-green-600 text-white rounded hover:bg-green-700"
     on:click={updatePassword}
-    disabled ={loading}
+    disabled ={loading || !sessionReady}
     >
       {loading ?"Updating....":"Update Password"}
   </button>
