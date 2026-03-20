@@ -12,10 +12,10 @@
   let showPassword = false;
   let showConfirmPassword = false;
 
-  let sessionReady = false;
+  //let sessionReady = false;
 
   onMount(async() => {
-    const hash = window.location.hash;
+   /* const hash = window.location.hash;
 
     if(hash && hash.includes("access_token")){
       const params = new URLSearchParams(hash.substring(1));
@@ -29,18 +29,16 @@
             refresh_token
           });
         }
-      }
+      }*/
 
-      setTimeout(async() =>{
-         const {data} = await supabase.auth.getSession();
+         const {data,error} = await supabase.auth.getSession();
 
        if(data.session){
-        sessionReady = true;
-        console.log("Session ready");
+        //sessionReady = true;
+        console.log("Session available");
        }else{
-        console.log("Session not ready");
+        console.log("No session");
        }
-      },500);
   });
 
   /*Live Password Rules*/
