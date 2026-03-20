@@ -17,35 +17,31 @@
   onMount(async() => {
     const hash = window.location.hash;
 
-    if(hash){
+    if(hash && hash.includes("access_token")){
       const params = new URLSearchParams(hash.substring(1));
+
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
 
          if(access_token && refresh_token){
-          const{error}= await supabase.auth.setSession({
+          await supabase.auth.setSession({
             access_token,
             refresh_token
           });
-
-          if(error){
-            console.error("Session set error:",error);
-          }else{
-            console.log("✅ Session set successfully");
-          }
-         }
+        }
       }
 
-      //VERIFY SESSION
-      const {data} = await supabase.auth.getSession();
+      setTimeout(async() =>{
+         const {data} = await supabase.auth.getSession();
 
-      if(data.session){
+       if(data.session){
         sessionReady = true;
-        console.log("Session exists");
-      }else{
-        console.log("No session found");
-      }
-      });
+        console.log("Session ready");
+       }else{
+        console.log("Session not ready");
+       }
+      },500);
+  });
 
   /*Live Password Rules*/
    $:length = password.length>=8;
@@ -81,6 +77,14 @@
         loading = false;
         return;
       }
+
+      const {data} = await supabase.auth.getSession();
+
+        if(!data.session){
+          error = "❌Session expired.Please request again";
+          loading = false;
+          return;
+        }
   
     const{error: updateError} = await supabase.auth.updateUser({password:password});
 
@@ -88,7 +92,7 @@
       throw updateError;
     }
 
-    message = 'Password updated successfully';
+    message = 'Password updated successfully! Redirecting....';
 
     setTimeout(() => {
       goto('/signin');
