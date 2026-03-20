@@ -175,7 +175,7 @@
   <button
     class="w-full p-3 bg-green-600 text-white rounded hover:bg-green-700"
     on:click={updatePassword}
-    disabled ={loading || !sessionReady}
+    disabled ={loading}
     >
       {loading ?"Updating....":"Update Password"}
   </button>
