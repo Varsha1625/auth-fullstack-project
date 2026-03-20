@@ -10,9 +10,11 @@
 
 		//Detect supabase password recovery
 		if(hash && hash.includes("type=recovery")){
+			setTimeout(() =>{
 			goto("/reset-password");
-		}
-	});
+		},500);
+	}
+});
 
 </script>
 

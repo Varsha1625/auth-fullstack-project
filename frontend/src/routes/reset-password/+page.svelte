@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  //import { onMount } from "svelte";
   import { supabase } from '$lib/supabaseClient';
   import { goto } from '$app/navigation';
 
@@ -14,8 +14,8 @@
 
   //let sessionReady = false;
 
-  onMount(async() => {
-   /* const hash = window.location.hash;
+  /*onMount(async() => {
+      const hash = window.location.hash;
 
     if(hash && hash.includes("access_token")){
       const params = new URLSearchParams(hash.substring(1));
@@ -29,7 +29,7 @@
             refresh_token
           });
         }
-      }*/
+      }
 
          const {data,error} = await supabase.auth.getSession();
 
@@ -39,7 +39,7 @@
        }else{
         console.log("No session");
        }
-  });
+  });*/
 
   /*Live Password Rules*/
    $:length = password.length>=8;
