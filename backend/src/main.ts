@@ -10,7 +10,8 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:5173',        // local dev
-      'https://frontend-dashboard-87.vercel.app' // production frontend
+      'https://frontend-dashboard-87.vercel.app', // production frontend
+      'https://auth-fullstack-project-11ypltie-varsha-nagwanis-projects.vercel.app'
     ],
     credentials: true,
     methods: 'GET,POST,PUT,DELETE,OPTIONS',
